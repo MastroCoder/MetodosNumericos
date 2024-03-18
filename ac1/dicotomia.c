@@ -3,22 +3,27 @@
  *
  * ALUNOS:
  * 210186 - Felipe Mastromauro Corrêa
+ * 190276 - Caio Gabriel Machado Vales
+ * 210369 - Eduardo Martimiano
  * */
 
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
 
+#define LEN_INTERVALO 2
+#define MAX_MONOMEROS 10
+#define MEDIA(a, b) (((a)+(b))*0.5)
+
 /*
  * Definição de um tipo de dado para guardar um monômerio completo de uma
  * função. Isto é, seja um monômero -12.5*x^3, esta estrutura deve conter
- * os três valores 
+ * os valores da base e do expoente. 
  * */
 
 typedef struct monomero
 {
 	float base;
-	float x; // Talvez seja interessante a remoção
 	int exp;
 } monomero;
 
@@ -26,30 +31,34 @@ typedef struct monomero
 
 void inicio_grafico();
 void ler_grau(int *grau);
-void ler_funcao(monomero *m, int grau);
-void ler_intervalo(float *intervalo, monomero *m);
+void alloc_intervalo(float **i);
+void alloc_monomero(monomero **m, int grau);
+void ler_funcao(monomero **m, int grau);
+void ler_intervalo(float **intervalo, monomero **m, int grau);
 void ler_condicao_parada(float *valor_condicao);
-float *alloc_intervalo();
-float media(float a, float b);
-monomero *alloc_monomero(int grau);
-void resolve_funcao(monomero *funcao, int grau, float *intervalo, float x);
+float resolve_funcao(monomero **funcao, int grau, float x);
+void resolve_dicotomia(monomero **funcao, float **intervalo, int grau);
 
-/* TODO: PASSAR POR REFERÊNCIA (malloc vira realloc com cast) */
 int main()
 {
 	int grau;
-	float parada;
+	float parada, *intervalo = NULL;
+	monomero *funcao = NULL;
 	ler_grau(&grau);
-	monomero *funcao = alloc_monomero(grau);
-	float *intervalo = alloc_intervalo();
-	ler_funcao(funcao, grau);
-	ler_intervalo(intervalo, funcao);
+	alloc_monomero(&funcao, grau);
+	alloc_intervalo(&intervalo);
+	ler_funcao(&funcao, grau);
+	ler_intervalo(&intervalo, &funcao, grau);
 	ler_condicao_parada(&parada);
-	resolve_funcao(funcao, grau, intervalo, 0);
+	resolve_dicotomia(&funcao, &intervalo, grau);
 	free(funcao);
 	free(intervalo);
 	return 0;
 }
+
+/*
+ * Marcador gráfico cosmético para melhor visualização do programa.
+ * */
 
 void inicio_grafico()
 {
@@ -58,25 +67,35 @@ void inicio_grafico()
 	printf("<===== MÉTODO DA DICOTOMIA  =====>\n\n");
 }
 
-monomero *alloc_monomero(int grau)
+/*
+ * Função de alocação dos monômeros necessários de acordo com o grau solicitado.
+ * */
+void alloc_monomero(monomero **m, int grau)
 {
-	monomero *m = malloc(sizeof(monomero) * (grau + 1));
-	if(m) return m;
-	return NULL;
+	*m = (monomero *)realloc(*m, sizeof(monomero) * (grau + 1));
+	if(!*m)
+	{
+		printf("ERRO: Algo ocorreu com a alocação.\n");
+		exit(1);
+	}
 }
 
-float *alloc_intervalo()
+/*
+ * Funcão de alocação do intervalo 
+ * */
+void alloc_intervalo(float **i)
 {
-	float *intervalo = malloc(sizeof(float) * 2);
-	if(intervalo) return intervalo;
-	return NULL;
+	*i = (float *)realloc(*i, sizeof(float) * LEN_INTERVALO);
+	if(!*i)
+	{
+		printf("ERRO: Algo ocorreu com a alocação.\n");
+		exit(1);
+	}
 }
 
-float media(float a, float b) // pode ser feito como macro
-{
-	return (a + b) * 0.5;
-}
-
+/*
+ * Função para leitura do grau da função, que é mantido entre 2 e 10;
+ * */
 void ler_grau(int *grau)
 {	
 	do 
@@ -84,31 +103,49 @@ void ler_grau(int *grau)
 		inicio_grafico();
 		printf("ESCREVA O VALOR DO GRAU DA EQUACAO (max. 10, min. 2)\nENTRADA: ");
 		scanf("%d", grau);
-	} while (*grau > 10 || *grau <= 1);
+	} while (*grau > MAX_MONOMEROS || *grau < LEN_INTERVALO);
 }
 
-void ler_funcao(monomero *m, int grau)
+
+/*
+ * Leitura da função que recebe o monômero a receber os dados e o grau da 
+ * função a fim de guardar as bases e os expoentes desejados.
+ * */
+void ler_funcao(monomero **m, int grau)
 {
 	float base = 0;
 	for(int i = grau; i >= 0; i--)
 	{
+		inicio_grafico();
 		printf("ESCREVA O VALOR DO TERMO DE %d GRAU\n", i);
 		printf("Ex.: Para descrever 12*x^%d, entre 12.\nENTRADA: ", grau);
 		scanf("%f", &base);
-		(m + grau - i)->exp = i;
-		(m + grau - i)->base = base;
+		(*m + grau - i)->exp = i;
+		(*m + grau - i)->base = base;
 	}
 }
 
-void ler_intervalo(float *intervalo, monomero *m)
+/*
+ * Procedimento que lê o intervalo a ser testado e verifica se o mesmo
+ * obedece aos limites teóricos estabelecidos (seja [a,b], f(a)*f(b) < 0)
+ * */
+void ler_intervalo(float **intervalo, monomero **m, int grau)
 {
-	// TODO: do-while para checar se f(a)*f(b) > 0
-	printf("ESCREVA O PRIMEIRO NÚMERO DO INTERVALO\nENTRADA: ");
-	scanf("%f", (intervalo));
-	printf("ESCREVA O SEGUNDO NÚMERO DO INTERVALO\nENTRADA: ");
-	scanf("%f", (intervalo + 1));
+	do
+	{	
+		inicio_grafico();
+		printf("ESCREVA O PRIMEIRO NÚMERO DO INTERVALO\nENTRADA: ");
+		scanf("%f", (*intervalo));
+		printf("ESCREVA O SEGUNDO NÚMERO DO INTERVALO\nENTRADA: ");
+		scanf("%f", (*intervalo + 1));
+	} while(resolve_funcao(&*m, grau, *(*intervalo)) * 
+		resolve_funcao(&*m, grau, *(*intervalo + 1)) >= 0);
 }
 
+/*
+ * Procedimento para a leitura da condição de parada a ser obedecida nas
+ * iterações do método.
+ * */
 void ler_condicao_parada(float *valor_condicao)
 {
 	inicio_grafico();
@@ -119,10 +156,39 @@ void ler_condicao_parada(float *valor_condicao)
 }
 
 
-
-void resolve_funcao(monomero *funcao, int grau, float *intervalo, float x)
+/*
+ * Funçao que usa a função, seu grau e um valor x para calcular o resultado
+ * de f(x).
+ * */
+float resolve_funcao(monomero **funcao, int grau, float x)
 { 
-	printf("chegou no solve\n");
-	for(int i = grau; i >= 0; i--) printf("%2.2f\n", (funcao + i)->base);
-	for(int i = 0; i < 2; i++) printf("%2.2f\n", *(intervalo + i));
+	float r = 0, r_monomero = 0;
+	for(int i = grau; i >= 0; i--) 
+	{
+		r_monomero = 0;
+		r_monomero += pow(x, (*funcao + i)->exp);
+		r_monomero *= (*funcao + i)->base;
+		r += r_monomero;
+	}
+	return r;
 }
+
+/*
+ * Função para calcular o valor mais próximo da raiz que está dentro do
+ * intervalo a partir da função definida e do grau.
+ * */
+void resolve_dicotomia(monomero **funcao, float **intervalo, int grau){
+	float media = 0, res_media;
+	do
+	{
+		media = MEDIA(*(*intervalo), *(*intervalo + 1));
+		float *resultados = malloc(sizeof(float) * 3);
+		*(resultados) = resolve_funcao(&*funcao, grau, *(*intervalo));
+		*(resultados + 1) = resolve_funcao(&*funcao, grau, media);
+		*(resultados + 2) = resolve_funcao(&*funcao, grau, *(*intervalo + 1));
+		for(int i = 0; i <= 2; i++) printf("%2.2f\n", resultados[i]);
+
+	} while (media = 0);
+
+}
+
