@@ -21,6 +21,8 @@
  * os valores da base e do expoente. 
  * */
 
+// TODO: LIMPAR BUFFER QUANDO HOUVER DIGITO ERRADO
+
 typedef struct monomero
 {
 	float base;
@@ -37,7 +39,7 @@ void ler_funcao(monomero **m, int grau);
 void ler_intervalo(float **intervalo, monomero **m, int grau);
 void ler_condicao_parada(float *valor_condicao);
 float resolve_funcao(monomero **funcao, int grau, float x);
-void resolve_dicotomia(monomero **funcao, float **intervalo, int grau);
+void resolve_dicotomia(monomero **funcao, float **intervalo, int grau, float valor_condicao);
 
 int main()
 {
@@ -50,7 +52,7 @@ int main()
 	ler_funcao(&funcao, grau);
 	ler_intervalo(&intervalo, &funcao, grau);
 	ler_condicao_parada(&parada);
-	resolve_dicotomia(&funcao, &intervalo, grau);
+	resolve_dicotomia(&funcao, &intervalo, grau, parada);
 	free(funcao);
 	free(intervalo);
 	return 0;
@@ -63,8 +65,8 @@ int main()
 void inicio_grafico()
 {
 	system("clear"); // TROCAR POR system('cls') NO WINDOWS
-	printf("<===== SOLUCIONADOR DE EQUAÇÕES =====>\n");
-	printf("<===== MÉTODO DA DICOTOMIA  =====>\n\n");
+	printf("<==================== SOLUCIONADOR DE EQUAÇÕES ====================>\n");
+	printf("<====================== MÉTODO DA DICOTOMIA ======================>\n\n");
 }
 
 /*
@@ -108,8 +110,8 @@ void ler_grau(int *grau)
 
 
 /*
- * Leitura da função que recebe o monômero a receber os dados e o grau da 
- * função a fim de guardar as bases e os expoentes desejados.
+ * Procedimento para leitura da função que recebe o monômero e os dados
+ * da função a fim de guardar as bases e os expoentes desejados.
  * */
 void ler_funcao(monomero **m, int grau)
 {
@@ -118,7 +120,7 @@ void ler_funcao(monomero **m, int grau)
 	{
 		inicio_grafico();
 		printf("ESCREVA O VALOR DO TERMO DE %d GRAU\n", i);
-		printf("Ex.: Para descrever 12*x^%d, entre 12.\nENTRADA: ", grau);
+		printf("Ex.: Para descrever 12*x^%d, entre 12.\nENTRADA: ", i);
 		scanf("%f", &base);
 		(*m + grau - i)->exp = i;
 		(*m + grau - i)->base = base;
@@ -157,7 +159,7 @@ void ler_condicao_parada(float *valor_condicao)
 
 
 /*
- * Funçao que usa a função, seu grau e um valor x para calcular o resultado
+ * Função que usa f, seu grau e um valor x para calcular o resultado
  * de f(x).
  * */
 float resolve_funcao(monomero **funcao, int grau, float x)
@@ -174,21 +176,40 @@ float resolve_funcao(monomero **funcao, int grau, float x)
 }
 
 /*
- * Função para calcular o valor mais próximo da raiz que está dentro do
+ * Procedimento para calcular o valor mais próximo da raiz que está dentro do
  * intervalo a partir da função definida e do grau.
+ *
+ * CONDIÇÔES DE PARADA
+ * |bk - ak| < u
+ * |f(m)| <= u
  * */
-void resolve_dicotomia(monomero **funcao, float **intervalo, int grau){
-	float media = 0, res_media;
+void resolve_dicotomia(monomero **funcao, float **intervalo, int grau, float valor_condicao){
+	float media = 0;
+	float check;
+	printf("<============= RESULTADOS =============>\n");
+	printf("|   a   |   m   |   b   | f(a) | f(m) | f(b) |\n");
+	printf("|-------|-------|-------|------|------|------|\n");
+	float *resultados = malloc(sizeof(float) * 3);
 	do
 	{
 		media = MEDIA(*(*intervalo), *(*intervalo + 1));
-		float *resultados = malloc(sizeof(float) * 3);
+		printf("|%7.3f|%7.3f|%7.3f|", *(*intervalo), media, *(*intervalo + 1));
 		*(resultados) = resolve_funcao(&*funcao, grau, *(*intervalo));
 		*(resultados + 1) = resolve_funcao(&*funcao, grau, media);
 		*(resultados + 2) = resolve_funcao(&*funcao, grau, *(*intervalo + 1));
-		for(int i = 0; i <= 2; i++) printf("%2.2f\n", resultados[i]);
-
-	} while (media = 0);
+		printf("%6.3f|%6.3f|%6.3f|\n", *(resultados), *(resultados + 1), *(resultados + 2));
+		printf("|-------|-------|-------|------|------|------|\n");
+		if(*(resultados) * *(resultados + 1) < 0)
+		{
+			*(*intervalo + 1) = media;
+		}
+		else if(*(resultados + 1) * *(resultados + 2) < 0)
+		{
+			*(*intervalo) = media;
+		}
+		check = fabsf(*(*intervalo) - *(*intervalo + 1));
+	} while (fabsf(*(resultados + 1)) > valor_condicao && check >= valor_condicao);
+	printf("RESULTADO MAIS PROXIMO: %6.3f\n", media);
 
 }
 
