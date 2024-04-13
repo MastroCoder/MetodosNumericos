@@ -21,21 +21,13 @@
  * os valores da base e do expoente. 
  * */
 
-// TODO: LIMPAR BUFFER QUANDO HOUVER DIGITO ERRADO
-
 typedef struct monomio
 {
 	float base;
 	int exp;
 } monomio;
 
-typedef struct tabela 
-{
-	float x;
-	float f_x;
-} tabela;
-
-/* Definição dos protótipos de funções e procedimentos para dicotomia */
+/* Definição dos protótipos de funções e procedimentos para DICOTOMIA */
 
 /* Procedimentos de alocação de memória */
 void alloc_intervalo(float **i);
@@ -48,7 +40,7 @@ void ler_intervalo(float **i, monomio **f, int grau);
 void ler_condicao_parada(float *cond);
 
 /* Procedimentos de escrita gráfica */
-void inicio_grafico();
+void inicio_grafico_dicotomia();
 void escreve_funcao(monomio **f, int grau);
 
 /* Procedimento de resolução de método */
@@ -61,16 +53,41 @@ float resolve_funcao(monomio **f, int grau, float x);
 
 void run_dicotomia();
 
-/* Definição dos protótipos de funções e procedimentos para LaGrange */
+/*
+ * Definição de um tipo de dado para guardar os valores interessantes de 
+ * uma função tabelada. Isto é, o valor de 'x' e o valor de 'f(x)'.
+ * */
 
+typedef struct tabela 
+{
+	float x;
+	float f_x;
+} tabela;
+
+/* Definição dos protótipos de funções e procedimentos para LAGRANGE */
+
+/* Procedimento de escrita gráfica */
+void inicio_grafico_lagrange();
+
+/* Procedimentos de alocação de memória */
 void alloc_tabela(tabela **t, int tam);
 void alloc_l(float **l, int tam);
-float resolve_lagrange(tabela **t, float **l, int tam, float valor);
+
+/* 
+ * Procedimentos para a leitura de dados importantes ao método, 
+ * como o número de pontos, os pontos em si e o valor a ser interpolado.
+ * */
 void ler_tabela(tabela **t, int tam);
 void ler_num_pontos(int *tam);
-void ler_x_interpolar(float *valor);
+void ler_x_interpolar(float *valor, tabela **t, int tam);
+
+/*
+ * Função para resolução de LaGrange e procedimento de exibição do resultado.
+ * */
+float resolve_lagrange(tabela **t, float **l, int tam, float valor);
 void resultados_lagrange(float **l, int tam, float valor, float res);
 
+/* Procedimento para realizar todo o processo */
 void run_lagrange();
 
 int main()
@@ -105,11 +122,11 @@ int main()
  * Marcador gráfico cosmético para melhor visualização do programa.
  * */
 
-void inicio_grafico()
+void inicio_grafico_dicotomia()
 {
 	system("clear"); // TROCAR POR system('cls') NO WINDOWS
 	printf("<==================== SOLUCIONADOR DE EQUAÇÕES ====================>\n");
-	printf("<====================== MÉTODO DA DICOTOMIA ======================>\n\n");
+	printf("<======================= MÉTODO DA DICOTOMIA ======================>\n\n");
 }
 
 /*
@@ -145,7 +162,7 @@ void ler_grau(int *grau)
 {	
 	do 
 	{
-		inicio_grafico();
+		inicio_grafico_dicotomia();
 		printf("ESCREVA O VALOR DO GRAU DA EQUACAO (max. 10, min. 2)\nENTRADA: ");
 		scanf("%d", grau);
 		fflush(stdin);
@@ -162,7 +179,11 @@ void ler_funcao(monomio **f, int grau)
 	float base = 0;
 	for(int i = grau; i >= 0; i--)
 	{
-		inicio_grafico();
+		inicio_grafico_dicotomia();
+		if(i < grau)
+		{
+			escreve_funcao(&*f, grau - i - 1);
+		}
 		printf("ESCREVA O VALOR DO TERMO DE %d GRAU\n", i);
 		printf("Ex.: Para descrever 12*x^%d, entre 12.\nENTRADA: ", i);
 		scanf("%f", &base);
@@ -181,7 +202,8 @@ void ler_intervalo(float **i, monomio **f, int grau)
 	char a = 0;
 	do
 	{	
-		inicio_grafico();
+		inicio_grafico_dicotomia();
+		escreve_funcao(&*f, grau);
 		if(a != 0) printf("INTERVALO INVÁLIDO.\n");
 		printf("ESCREVA O PRIMEIRO NÚMERO DO INTERVALO\nENTRADA: ");
 		scanf("%f", (*i));
@@ -200,7 +222,7 @@ void ler_intervalo(float **i, monomio **f, int grau)
  * */
 void ler_condicao_parada(float *cond)
 {
-	inicio_grafico();
+	inicio_grafico_dicotomia();
 	printf("ESCREVA O VALOR DA CONDIÇÃO DE PARADA\n");
 	printf("Ex.: Seja a condição u, as iterações param se |f(m)| <= u\n");
 	printf("ENTRADA: ");
@@ -225,18 +247,26 @@ float resolve_funcao(monomio **f, int grau, float x)
 	return res;
 }
 
+float calc_k(float **i, float cond)
+{
+	float k = log10f(*(*i + 1) - *(*i));
+	k -= log10f(cond);
+	return k / log10f(2);
+}
+
 /*
  * Procedimento que imprime a função descrita no vetor de monômeros.
  * */
 void escreve_funcao(monomio **f, int grau)
 {
-	int i;
-	printf("f(x) = ");
-	for(int i = grau; i > 0; i--)
+	printf("\n<=================== FUNÇÃO DESCRITA =====================>\n");
+	printf("\nf(x) = ");
+	for(int i = 0; i < grau; i++)
 	{
 		printf("(%6.3f)x^%d + ", (*f + i)->base, (*f + i)->exp);
 	}
-	printf("(%6.3f)x^%d\n", (*f + i)->base, (*f + i)->exp);
+	printf("(%6.3f)x^%d\n", (*f + grau)->base, (*f + grau)->exp);
+	printf("\n<=========================================================>\n");
 }
 
 /*
@@ -250,20 +280,25 @@ void escreve_funcao(monomio **f, int grau)
 void resolve_dicotomia(monomio **f, float **i, int grau, float cond){
 	float media = 0;
 	float check;
-	//escreve_funcao(&*funcao, grau);
-	printf("<============= RESULTADOS =============>\n");
-	printf("|   a   |   m   |   b   | f(a) | f(m) | f(b) |\n");
-	printf("|-------|-------|-------|------|------|------|\n");
+	float k = calc_k(&*i, cond);
+	escreve_funcao(&*f, grau);
+	printf("<============================= RESULTADOS =============================>\n");
+	printf("| Iter. |     a    |     m    |     b    |   f(a)  |   f(m)  |   f(b)  |\n");
+	printf("|:-----:|:--------:|:--------:|:--------:|:-------:|:-------:|:-------:|\n");
 	float *res = malloc(sizeof(float) * 3);
+	int count = 0;
 	do
 	{
 		media = MEDIA(*(*i), *(*i + 1));
-		printf("|%7.3f|%7.3f|%7.3f|", *(*i), media, *(*i + 1));
+		printf("|%7d| %+7.6f| %+7.6f| %+7.6f|", count++, *(*i), media, *(*i + 1));
 		*(res) = resolve_funcao(&*f, grau, *(*i));
 		*(res + 1) = resolve_funcao(&*f, grau, media);
 		*(res + 2) = resolve_funcao(&*f, grau, *(*i + 1));
-		printf("%6.3f|%6.3f|%6.3f|\n", *(res), *(res + 1), *(res + 2));
-		printf("|-------|-------|-------|------|------|------|\n");
+		printf("  %+2.3f |  %+2.3f |  %+2.3f |\n", *(res), *(res + 1), *(res + 2));
+		printf("|-------|----------|----------|----------|---------|---------|---------|\n");
+		
+		/* CHECK |bk-ak| < u NÃO PARECE SER UTILIZADO NO EXEMPLO DA PROFESSORA */
+		//check = fabsf(*(*i + 1) - *(*i));
 		if(*(res) * *(res + 1) < 0)
 		{
 			*(*i + 1) = media;
@@ -272,10 +307,11 @@ void resolve_dicotomia(monomio **f, float **i, int grau, float cond){
 		{
 			*(*i) = media;
 		}
-		// Possivelmente errado
-		check = fabsf(*(*i) - *(*i + 1));
-	} while (fabsf(*(res + 1)) > cond && check >= cond);
-	printf("RESULTADO MAIS PROXIMO: %6.3f\n", media);
+	} while (fabsf(*(res + 1)) > cond);
+	printf("RESULTADO MAIS PROXIMO: %6.3f, com erro de %.6f (< %6.3f)\n", media, *(res + 1), cond);
+	int aprox = (int)k;
+	if(k > (float)aprox) aprox++; 
+	printf("Valor de k = %6.3f (num. de iterações aprox. = %d)\n", k, aprox);
 	free(res);
 }
 
@@ -295,18 +331,33 @@ void run_dicotomia()
 	free(intervalo);
 }
 
+void inicio_grafico_lagrange()
+{
+	system("clear"); // TROCAR POR system('cls') NO WINDOWS
+	printf("<==================== SOLUCIONADOR DE EQUAÇÕES ====================>\n");
+	printf("<======================= MÉTODO DE LAGRANGE =======================>\n\n");
+}
+
 void ler_num_pontos(int *tam)
 {
+	inicio_grafico_lagrange();
 	printf("ESCREVA O NÚMERO DE PONTOS DE SUA TABELA: ");
-	scanf("%d", tam);
+	do
+	{
+		scanf("%d", tam);
+		fflush(stdin);
+	}while(*tam < 2);
 	fflush(stdin);
 }
 
-void ler_x_interpolar(float *valor)
+void ler_x_interpolar(float *valor, tabela **t, int tam)
 {
 	printf("ESCREVA O VALOR DE X PARA A INTERPOLAÇÃO: ");
-	scanf("%f", valor);
-	fflush(stdin);
+	do
+	{
+		scanf("%f", valor);
+		fflush(stdin);
+	}while((*t)->x > *valor || (*t + tam - 1)->x < *valor);
 }
 
 void alloc_tabela(tabela **t, int tam)
@@ -346,6 +397,20 @@ void ler_tabela(tabela **t, int tam)
 	}
 }
 
+void escreve_tabela(tabela **t, int tam)
+{
+	system("clear");
+	inicio_grafico_lagrange();
+	printf("<======================= TABELA ========================>\n");
+	printf("|   x   |  f(x)  |\n");
+	printf("|-------|--------|\n");
+	for(int i = 0; i < tam; i++)
+	{
+		printf("|%7.3f|%8.3f|\n", (*t + i)->x, (*t + i)->f_x);
+		printf("|-------|--------|\n");
+	}
+}
+
 float resolve_lagrange(tabela **t, float **l, int tam, float valor)
 {
 	float p_x = 0;
@@ -365,10 +430,10 @@ float resolve_lagrange(tabela **t, float **l, int tam, float valor)
 
 void resultados_lagrange(float **l, int tam, float valor, float res)
 {
-	printf("RESULTADOS\n");
+	printf("\n<=============== RESULTADOS =================>\n");
 	for(int i = 0; i < tam; i++)
 	{
-		printf("Valor de L[%d]: %2.4f\n", i, *(*l + i));
+		printf("Valor de L[%d]: %2.4f\n\n", i, *(*l + i));
 	}
 	printf("O valor de f(x) em %2.4f é %2.4f\n", valor, res);
 }
@@ -384,7 +449,8 @@ void run_lagrange()
 	alloc_l(&l, tam);
 	alloc_tabela(&t, tam);
 	ler_tabela(&t, tam);
-	ler_x_interpolar(&valor);
+	escreve_tabela(&t, tam);
+	ler_x_interpolar(&valor, &t, tam);
 	float res = resolve_lagrange(&t, &l, tam, valor);
 	resultados_lagrange(&l, tam, valor, res);
 	free(t);
