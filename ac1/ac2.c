@@ -1,5 +1,5 @@
 /*
- * TRABALHO AC1 - IMPLEMENTAÇÃO DO MÉTODO DA DICOTOMIA
+ * TRABALHO AC2 - IMPLEMENTAÇÃO DOS MÉTODOS DA DICOTOMIA E DE LAGRANGE
  *
  * ALUNOS:
  * 210186 - Felipe Mastromauro Corrêa
@@ -13,6 +13,8 @@
 
 #define LEN_INTERVALO 2
 #define MAX_MONOMIOS 10
+
+#define MIN_PONTOS 2
 #define MEDIA(a, b) (((a)+(b))*0.5)
 
 /*
@@ -94,28 +96,25 @@ int main()
 {
 	int i;
 	printf("ESCOLHA O MÉTODO QUE IRÁ UTILIZAR\n");
-	printf("LAGRANGE [0] OU DICOTOMIA [1]: ");
-	while(scanf("%d", &i) != 0)
+	printf("LAGRANGE [0] OU DICOTOMIA [1] (SAIR: 99): ");
+	scanf("%d", &i);
+	fflush(stdin);
+	switch(i)
 	{
-		fflush(stdin);
-		switch(i)
-		{
-			case 0:
-				system("clear");
-				run_lagrange();
-				break;
-			case 1:
-				system("clear");
-				run_dicotomia();
-				break;
-			default:
-				printf("ESCOLHA UM MÉTODO VÁLIDO.");
-		}
-		printf("ESCOLHA O MÉTODO QUE IRÁ UTILIZAR\n");
-		printf("LAGRANGE [0] OU DICOTOMIA [1]: ");
+		case 0:
+			system("clear");
+			run_lagrange();
+			break;
+		case 1:
+			system("clear");
+			run_dicotomia();
+			break;
+		case 99:
+			return 0;
+		default:
+			printf("ESCOLHA UM MÉTODO VÁLIDO.");
 	}
-	
-	return 0;	
+	return main();
 }
 
 /*
@@ -247,6 +246,9 @@ float resolve_funcao(monomio **f, int grau, float x)
 	return res;
 }
 
+/*
+ * Função que retorna o valor de K para a estimativa do número de iterações.
+ * */
 float calc_k(float **i, float cond)
 {
 	float k = log10f(*(*i + 1) - *(*i));
@@ -273,9 +275,13 @@ void escreve_funcao(monomio **f, int grau)
  * Procedimento para calcular o valor mais próximo da raiz que está dentro do
  * intervalo a partir da função definida e do grau.
  *
- * CONDIÇÔES DE PARADA
+ * CONDIÇÕES DE PARADA 
  * |bk - ak| < u
  * |f(m)| <= u
+ * Cálculo de k
+ *
+ * FOI IMPLEMENTADA SOMENTE A SEGUNDA CONDIÇÂO. O cálculo de K é somente
+ * mostrado.
  * */
 void resolve_dicotomia(monomio **f, float **i, int grau, float cond){
 	float media = 0;
@@ -298,7 +304,7 @@ void resolve_dicotomia(monomio **f, float **i, int grau, float cond){
 		printf("|-------|----------|----------|----------|---------|---------|---------|\n");
 		
 		/* CHECK |bk-ak| < u NÃO PARECE SER UTILIZADO NO EXEMPLO DA PROFESSORA */
-		//check = fabsf(*(*i + 1) - *(*i));
+		// check = fabsf(*(*i + 1) - *(*i));
 		if(*(res) * *(res + 1) < 0)
 		{
 			*(*i + 1) = media;
@@ -314,7 +320,9 @@ void resolve_dicotomia(monomio **f, float **i, int grau, float cond){
 	printf("Valor de k = %6.3f (num. de iterações aprox. = %d)\n", k, aprox);
 	free(res);
 }
-
+/*
+ * Procedimento para rodar o código de Dicotomia.
+ * */
 void run_dicotomia()
 {
 	int grau;
@@ -331,6 +339,9 @@ void run_dicotomia()
 	free(intervalo);
 }
 
+/*
+ * Procedimento gráfico para o início do Método de Lagrange.
+ * */
 void inicio_grafico_lagrange()
 {
 	system("clear"); // TROCAR POR system('cls') NO WINDOWS
@@ -338,28 +349,48 @@ void inicio_grafico_lagrange()
 	printf("<======================= MÉTODO DE LAGRANGE =======================>\n\n");
 }
 
+/*
+ * Procedimento para ler o número de pontos da tabela.
+ * */
 void ler_num_pontos(int *tam)
 {
 	inicio_grafico_lagrange();
-	printf("ESCREVA O NÚMERO DE PONTOS DE SUA TABELA: ");
+	char a = 0;
 	do
 	{
+		if(a == 1)
+		{
+			printf("INSIRA UM VALOR VÁLIDO (NUM > 1).\n");
+		}
+		a = 1;
+		printf("ESCREVA O NÚMERO DE PONTOS DE SUA TABELA: ");
 		scanf("%d", tam);
 		fflush(stdin);
-	}while(*tam < 2);
-	fflush(stdin);
+	}while(*tam < MIN_PONTOS);
 }
 
+/*
+ * Procedimento para ler o valor que será interpolado.
+ * */
 void ler_x_interpolar(float *valor, tabela **t, int tam)
 {
-	printf("ESCREVA O VALOR DE X PARA A INTERPOLAÇÃO: ");
+	char a = 0;
 	do
 	{
+		if(a == 1)
+		{
+			printf("VALOR INVÁLIDO INSERIDO. INSIRA UM VALOR ENTRE O MAIOR E O MENOR NÚMERO DA TABELA.\n");
+		}
+		a = 1;
+		printf("ESCREVA O VALOR DE X PARA A INTERPOLAÇÃO: ");
 		scanf("%f", valor);
 		fflush(stdin);
 	}while((*t)->x > *valor || (*t + tam - 1)->x < *valor);
 }
 
+/*
+ * Procedimento para alocar o espaço da tabela.
+ * */
 void alloc_tabela(tabela **t, int tam)
 {
 	*t = (tabela *) realloc(*t, sizeof(tabela) * (tam));
@@ -370,6 +401,9 @@ void alloc_tabela(tabela **t, int tam)
 	}
 }
 
+/*
+ * Proedimento para alocar o espaço para os valores de L a serem calculados.
+ * */
 void alloc_l(float **l, int tam)
 {
 	*l = (float *) realloc(*l, sizeof(float) * (tam));
@@ -380,8 +414,12 @@ void alloc_l(float **l, int tam)
 	}
 }
 
+/*
+ * Procedimento para a leitura dos valores da tabela.
+ * */
 void ler_tabela(tabela **t, int tam)
 {
+	system("clear");
 	printf("PREENCHIMENTO DE TABELA\n");
 	for(int i = 0; i < tam; i++)
 	{
@@ -397,6 +435,9 @@ void ler_tabela(tabela **t, int tam)
 	}
 }
 
+/*
+ * Procedimento para a escrita gráfica da tabela.
+ * */
 void escreve_tabela(tabela **t, int tam)
 {
 	system("clear");
@@ -411,6 +452,10 @@ void escreve_tabela(tabela **t, int tam)
 	}
 }
 
+/*
+ * Algoritmo disponível no Canvas para a resolução do método de Lagrange em 
+ * complexidade O(n²).
+ * */
 float resolve_lagrange(tabela **t, float **l, int tam, float valor)
 {
 	float p_x = 0;
@@ -428,31 +473,44 @@ float resolve_lagrange(tabela **t, float **l, int tam, float valor)
 	return p_x;
 }
 
+/*
+ * Procedimento para a impressão dos resultados do método de Lagrange.
+ * */
 void resultados_lagrange(float **l, int tam, float valor, float res)
 {
 	printf("\n<=============== RESULTADOS =================>\n");
 	for(int i = 0; i < tam; i++)
 	{
-		printf("Valor de L[%d]: %2.4f\n\n", i, *(*l + i));
+		printf("\nValor de L[%d]: %2.4f\n\n", i, *(*l + i));
 	}
-	printf("O valor de f(x) em %2.4f é %2.4f\n", valor, res);
+	printf("\nO valor de f(x) em %2.4f é %2.4f\n", valor, res);
 }
 
+/*
+ * Procedimento para a execução do método de Lagrange.
+ * */
 void run_lagrange()
 {
 	tabela *t = NULL;
 	float *l = NULL;
 	float valor;
 	int tam;
-	
+	char a = 's';
+
 	ler_num_pontos(&tam);
 	alloc_l(&l, tam);
 	alloc_tabela(&t, tam);
 	ler_tabela(&t, tam);
 	escreve_tabela(&t, tam);
-	ler_x_interpolar(&valor, &t, tam);
-	float res = resolve_lagrange(&t, &l, tam, valor);
-	resultados_lagrange(&l, tam, valor, res);
+	while(a == 's')
+	{
+		ler_x_interpolar(&valor, &t, tam);
+		float res = resolve_lagrange(&t, &l, tam, valor);
+		resultados_lagrange(&l, tam, valor, res);
+		printf("Deseja interpolar mais um ponto nesta tabela? (s/n): ");
+		// Espaço para evitar de ler newline ao dar scanf em char
+		scanf(" %c", &a);
+	}
 	free(t);
 	free(l);
 }
