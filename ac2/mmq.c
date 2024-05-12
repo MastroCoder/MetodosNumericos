@@ -57,7 +57,10 @@ float produto_vetores(float **v1, float **v2, int tam){
     }
     return res;
 }
-
+/*
+    Essas duas funções seriam legais demais se eu conseguisse juntar elas em uma só na verdade..
+    sem repetir...
+*/
 void resolve_reta(float **x, float **y, int tam){
     float *u0 = NULL;
     alloc_vetor(&u0, tam);
@@ -79,6 +82,39 @@ void resolve_reta(float **x, float **y, int tam){
     eliminacao_gauss(&matriz, 2, 3);
     imprime(&matriz, 2, 3);
     obter_coefs(&matriz, 2, 3, 1);
+}
+
+void resolve_parabola(float **x, float **y, int tam){
+    float *u0, *u2 = NULL;
+    alloc_vetor(&u0, tam);
+    alloc_vetor(&u2, tam);
+    for(int i = 0; i < tam; i++){
+        *(u0 + i) = 1;
+        *(u2 + i) = *(*x + i) * *(*x + i); 
+    }
+    // printar y, u0, u1 e u2;
+    float *matriz = NULL;
+    alloc_vetor(&matriz, 12);
+    // coisa mais feia ainda
+    *(matriz+0*4+0) = produto_vetores(&u0, &u0, tam);
+    *(matriz+0*4+1) = produto_vetores(&u0, x, tam);
+    *(matriz+0*4+2) = produto_vetores(&u2, &u0, tam);
+    *(matriz+0*4+3) = produto_vetores(y, &u0, tam);
+
+    *(matriz+1*4+0) = produto_vetores(&u0, x, tam);
+    *(matriz+1*4+1) = produto_vetores(x, x, tam);
+    *(matriz+1*4+2) = produto_vetores(&u2, x, tam);
+    *(matriz+1*4+3) = produto_vetores(y, x, tam);
+
+    *(matriz+2*4+0) = produto_vetores(&u0, &u2, tam);
+    *(matriz+2*4+1) = produto_vetores(x, &u2, tam);
+    *(matriz+2*4+2) = produto_vetores(&u2, &u2, tam);
+    *(matriz+2*4+3) = produto_vetores(y, &u2, tam);
+
+    imprime(&matriz, 3, 4);
+    eliminacao_gauss(&matriz, 3, 4);
+    imprime(&matriz, 3, 4);
+    obter_coefs(&matriz, 3, 4, 2);
 }
 
 // não vai usar provavelmente
@@ -121,7 +157,10 @@ void obter_coefs(float **matriz, int linha, int coluna, int grau){
         printf("a0 = %f \t a1 = %f", *(coefs), *(coefs + 1));
     }
     else{
-        //
+        *(coefs + 2) = *(*matriz+2*coluna+3)/ *(*matriz+2*coluna+2);
+        *(coefs + 1) = (*(*matriz+1*coluna+3) - *(*matriz+1*coluna+2)* *(coefs + 2)) / *(*matriz+1*coluna+1);
+        *(coefs) = (*(*matriz+0*coluna+3) - *(*matriz+0*coluna+2)* *(coefs + 2) - *(*matriz+0*coluna+1)* *(coefs + 1)) / *(*matriz+0*coluna+0);
+        printf("a0 = %f \t a1 = %f \t a2 = %f", *(coefs), *(coefs + 1), *(coefs + 2));
     }
     
 }
@@ -139,9 +178,9 @@ void run_mmq(){
     if(grau == 1){
         resolve_reta(&x, &y, tam);
     }
-    /*else if(grau == 2){
+    else if(grau == 2){
         resolve_parabola(&x, &y, tam);
-    }*/
+    }
     free(x);
     free(y);
 }
