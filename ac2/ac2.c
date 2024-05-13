@@ -11,29 +11,40 @@
 #include <stdio.h>
 #include <math.h>
 
-#define LEN_INTERVALO 2
+#define MIN_EQUACAO 1
 #define MAX_MONOMIOS 10
+#define LEN_INTERVALO 2
 
-#define MIN_PONTOS 2
-#define MEDIA(a, b) (((a) + (b)) * 0.5)
+/*
+ * Portótipos de função para o método dos mínimos quadrados 
+*/
 
 void alloc_vetor(float **v, int tam);
 void ler_vetores_xy(float **x, float **y, int tam);
 void ler_grau_ajuste(int *grau);
 void resolve_reta(float **x, float **y, int tam);
 void imprime_matriz(float **m, int linha, int coluna);
-void imprime_vetor(float **v, int tam);
 void resolve_parabola(float **x, float **y, int tam);
 void eliminacao_gauss(float **matriz, int linha, int coluna);
-void reorganiza_matriz(float **matriz, int linha, int coluna);
 void obter_coefs(float **matriz, int linha, int coluna, int grau);
 void run_mmq();
+
+/*
+ * Definição de um tipo de dado para guardar um monômio completo de uma
+ * função. Isto é, seja um monômero -12.5*x^3, esta estrutura deve conter
+ * os valores da base e do expoente. 
+ * */
 
 typedef struct monomio
 {
 	float base;
 	int exp;
 } monomio;
+
+/*
+ * Protótipos de função para o método dos trapézios
+*/
+
 float mais_perto(float a);
 void alloc_monomio(monomio **f, int grau);
 void alloc_intervalo(float **i);
@@ -104,6 +115,10 @@ void ler_grau_ajuste(int *grau)
 	} while (*grau < 0 || *grau > 2);
 }
 
+
+/**
+ * Calcula o produto entre dois vetores.
+*/
 float produto_vetores(float **v1, float **v2, int tam)
 {
 	float res = 0;
@@ -114,6 +129,13 @@ float produto_vetores(float **v1, float **v2, int tam)
 	return res;
 }
 
+/**
+ * resolve_reta() e resolve_parabola() poderiam ser uma única função.
+*/
+
+/**
+ * Resolve o método dos mínimos quadrados para grau == 1
+*/
 void resolve_reta(float **x, float **y, int tam)
 {
 	float *u0 = NULL;
@@ -122,13 +144,14 @@ void resolve_reta(float **x, float **y, int tam)
 	{
 		*(u0 + i) = 1;
 	}
-	// printar y, u0 e u1;
+	// printa y, u0 e u1;
 	printf("VETORES\n\nu0 \t u1 \t y\n");
 	for (int i = 0; i < tam; i++)
 	{
 		printf("%.2f \t %.2f \t %.2f\n", *(u0 + i), *(*x + i), *(*y + i));
 	}
 
+	// Montagem da matriz
 	float *matriz = NULL;
 	alloc_vetor(&matriz, 6);
 	*(matriz + 0 * 3 + 0) = produto_vetores(&u0, &u0, tam);
@@ -138,6 +161,7 @@ void resolve_reta(float **x, float **y, int tam)
 	*(matriz + 1 * 3 + 1) = produto_vetores(x, x, tam);
 	*(matriz + 1 * 3 + 2) = produto_vetores(y, x, tam);
 
+	// Impressão dos resultados
 	printf("\nMATRIZ OBTIDA\n\n");
 	imprime_matriz(&matriz, 2, 3);
 	eliminacao_gauss(&matriz, 2, 3);
@@ -148,6 +172,9 @@ void resolve_reta(float **x, float **y, int tam)
 	free(u0);
 }
 
+/**
+ * Resolve o método dos mínimos quadrados para grau == 2
+*/
 void resolve_parabola(float **x, float **y, int tam)
 {
 	float *u0 = NULL; 
@@ -160,12 +187,13 @@ void resolve_parabola(float **x, float **y, int tam)
 		*(u2 + i) = *(*x + i) * *(*x + i);
 	}
 	
-	// printar y, u0, u1 e u2;
+	// printa y, u0, u1 e u2;
 	printf("VETORES\n\nu0 \t u1 \t u2 \t y\n");
 	for (int i = 0; i < tam; i++)
 	{
 		printf("%.2f \t %.2f \t %.2f \t %.2f\n", *(u0 + i), *(*x + i), *(u2 + i), *(*y + i));
 	}
+	// Montagem da matriz
 	float *matriz = NULL;
 	alloc_vetor(&matriz, 12);
 
@@ -183,7 +211,8 @@ void resolve_parabola(float **x, float **y, int tam)
 	*(matriz + 2 * 4 + 1) = produto_vetores(x, &u2, tam);
 	*(matriz + 2 * 4 + 2) = produto_vetores(&u2, &u2, tam);
 	*(matriz + 2 * 4 + 3) = produto_vetores(y, &u2, tam);
-
+	
+	//Impressão dos valores
 	printf("MATRIZ OBTIDA\n\n");
 	imprime_matriz(&matriz, 3, 4);
 	eliminacao_gauss(&matriz, 3, 4);
@@ -194,7 +223,9 @@ void resolve_parabola(float **x, float **y, int tam)
 	free(u0);
 	free(u2);
 }
-
+/**
+ * Função de impressão da matriz fornecida pela professora.
+*/
 void imprime_matriz(float **m, int linha, int coluna)
 {
 	int l, c;
@@ -208,31 +239,9 @@ void imprime_matriz(float **m, int linha, int coluna)
 	}
 }
 
-void reorganiza_matriz(float **matriz, int linha, int coluna)
-{
-	float a, b, temp;
-	// Não é assim
-	for (int i = 1; i < linha; i++)
-	{
-		a = *(*matriz + (i - 1) * coluna + 0);
-		b = *(*matriz + i * coluna + 0);
-		if (a > b)
-		{
-			// troca a linha toda
-			for (int j = 0; j < coluna; j++)
-			{
-				temp = *(*matriz + (i - 1) * coluna + j);
-				*(*matriz + (i - 1) * coluna + j) = *(*matriz + i * coluna + j);
-				*(*matriz + i * coluna + j) = temp;
-			}
-		}
-	}
-}
-
 void eliminacao_gauss(float **matriz, int linha, int coluna)
 {
 	float m;
-	// reorganiza_matriz(&*matriz, linha, coluna);
 	for (int i = 0; i < coluna; i++)
 	{
 		for (int j = i + 1; j < linha; j++)
@@ -248,6 +257,9 @@ void eliminacao_gauss(float **matriz, int linha, int coluna)
 	}
 }
 
+/**
+ * Obtenção de coeficientes a partir da matriz obtida.
+*/
 void obter_coefs(float **matriz, int linha, int coluna, int grau)
 {
 	float *coefs = NULL;
@@ -311,7 +323,7 @@ void ler_grau_equacao(int *grau)
 		printf("ESCREVA O VALOR DO GRAU DA EQUACAO (max. 10, min. 2)\nENTRADA: ");
 		scanf("%d", grau);
 		fflush(stdin);
-	} while (*grau > MAX_MONOMIOS || *grau < LEN_INTERVALO);
+	} while (*grau > MAX_MONOMIOS || *grau < MIN_EQUACAO);
 }
 
 void alloc_monomio(monomio **f, int grau)
@@ -402,19 +414,26 @@ float resolve_funcao(monomio **f, int grau, float x)
 	}
 	return res;
 }
-
+/**
+ * Função para aproximar o float de algo mais redondo ainda 
+*/
 float mais_perto(float a){
 	a = roundf(a * 100) / 100;
 	return a;
 }
 
+/**
+ * Função para o cálculo do ITR
+*/
 void calcula_itr(monomio **funcao, int grau, float **i, float *num_div)
 {
 	float h = (*(*i + 1) - *(*i)) / *num_div;
 	h = mais_perto(h);
 	printf("\nh = (%.2f - %.2f)/(%.2f) = %f\n", *(*i + 1), *(*i), *num_div, h);
+	//Calcula f(x1) e f(x2)
 	float f_x1 = resolve_funcao(&*funcao, grau, *(*i));
 	float f_x2 = resolve_funcao(&*funcao, grau, *(*i + 1));
+	// Inicializa ITR
 	float itr = f_x1 + f_x2;
 	printf("x 	f(x)\n");
 	printf("%.2f 	%.2f\n", *(*i), f_x1);
@@ -422,10 +441,12 @@ void calcula_itr(monomio **funcao, int grau, float **i, float *num_div)
 	{
 		step = mais_perto(step);
 		float f_xi = resolve_funcao(&*funcao, grau, step);
+		// Incrementa o valor de ITR com tudo exceto as bordas (f(x1) e f(x2))
 		itr += 2 * f_xi;
 		printf("%.2f 	%.2f\n", step, f_xi);
 	}
 	printf("%.2f 	%.2f\n", *(*i + 1), f_x2);
+	// Aplica a parte de fora do colchete
 	itr *= h / 2;
 	printf("\nITR = %f\n", itr);
 }
