@@ -15,6 +15,7 @@ void resolve_reta(float **x, float **y, int tam);
 void imprime(float **m, int linha, int coluna);
 void resolve_parabola(float **x, float **y, int tam);
 void eliminacao_gauss(float **matriz, int linha, int coluna);
+void reorganiza_matriz(float **matriz, int linha, int coluna);
 void obter_coefs(float **matriz, int linha, int coluna, int grau);
 void run_mmq();
 
@@ -117,7 +118,6 @@ void resolve_parabola(float **x, float **y, int tam){
     obter_coefs(&matriz, 3, 4, 2);
 }
 
-// não vai usar provavelmente
 void imprime(float **m, int linha, int coluna)
 {
 	int l, c;
@@ -131,15 +131,33 @@ void imprime(float **m, int linha, int coluna)
 	}
 }
 
+void reorganiza_matriz(float **matriz, int linha, int coluna){
+    float a, b, temp;
+    // Não é assim
+    for(int i = 1; i < linha; i++){
+        a = *(*matriz+(i - 1)*coluna+0);
+        b = *(*matriz+i*coluna+0);
+        if(a > b){
+            //troca a linha toda
+            for(int j = 0; j < coluna; j++){
+                temp = *(*matriz+(i - 1)*coluna+j);
+                *(*matriz+(i - 1)*coluna+j) = *(*matriz+i*coluna+j);
+                *(*matriz+i*coluna+j) = temp;
+            }
+        }
+    }
+}
+
 void eliminacao_gauss(float **matriz, int linha, int coluna){
     float m;
+    //reorganiza_matriz(&*matriz, linha, coluna);
     for(int i = 0; i < coluna; i++){
         for(int j = i + 1; j < linha; j++){
             // gera o m da linha
             m = *(*matriz+j*coluna+i) / *(*matriz+i*coluna+i);
             //multiplica a linha pelo m
             for(int k = 0; k < coluna; k++){
-                *(*matriz+j*coluna+k) = *(*matriz+j*coluna+k) - *(*matriz+(j-1)*coluna+k)*m;
+                *(*matriz+j*coluna+k) = *(*matriz+j*coluna+k) - *(*matriz+i*coluna+k)*m;
             }
         }
     }
